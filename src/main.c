@@ -71,6 +71,10 @@ int main (int argc, char *argv[])
 
 	bmp_size = width * pixel_size;
 	bmp_buffer = (JSAMPLE *) malloc(bmp_size);
+	if (!bmp_buffer) {
+		log_err( "Out of memory\n");
+		goto exit;
+	}
 
 	log_inf( "Starting compression\n");
 
@@ -110,6 +114,7 @@ int main (int argc, char *argv[])
 	log_inf( "Finishing decompression\n");
 
 	jpeg_finish_decompress(&cininfo);
+	fclose(fin);
 	jpeg_destroy_decompress(&cininfo);
 
 	log_inf( "Finishing compression\n");
