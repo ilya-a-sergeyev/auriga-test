@@ -23,7 +23,7 @@ int main (int argc, char *argv[])
 	JSAMPLE *bmp_buffer;
 	JDIMENSION width, height;
 	J_COLOR_SPACE colorspace;
-	int row_stride, pixel_size;
+	int pixel_size;
 
 	log_buf = log_init(argv[0]);
 	if (!log_buf) {
@@ -81,23 +81,8 @@ int main (int argc, char *argv[])
 
 	log_inf("Input JPEG is %dx%d [%d]\n",  (int)width, (int)height, (int)pixel_size);
 
-	bmp_size = width * height * pixel_size;
+	bmp_size = width * pixel_size;
 	bmp_buffer = (JSAMPLE *) malloc(bmp_size);
-
-	row_stride = width * pixel_size;
-
-	log_inf("Scanning lines\n");
-
-	while (cininfo.output_scanline < cininfo.output_height) {
-		JSAMPLE *buffer_array[1];
-		buffer_array[0] = bmp_buffer +  (cininfo.output_scanline) * row_stride;
-		jpeg_read_scanlines(&cininfo, buffer_array, 1);
-	}
-
-	log_inf( "Finishing decompression\n");
-
-	jpeg_finish_decompress(&cininfo);
-	jpeg_destroy_decompress(&cininfo);
 
 	log_inf( "Starting compression\n");
 
@@ -125,13 +110,19 @@ int main (int argc, char *argv[])
 
 	jpeg_start_compress(&coutinfo, TRUE);
 
-	log_inf("Encoding lines\n");
+	log_inf("Scanning and encoding lines\n");
 
-	while (coutinfo.next_scanline < coutinfo.image_height) {
-	    JSAMPLE *buffer_array[1];
-	    buffer_array[0] = bmp_buffer +  (coutinfo.next_scanline) * row_stride;
-	    (void) jpeg_write_scanlines(&coutinfo, buffer_array, 1);
+	while (cininfo.output_scanline < cininfo.output_height) {
+		JSAMPLE *buffer_array[1];
+		buffer_array[0] = bmp_buffer;
+		jpeg_read_scanlines(&cininfo, buffer_array, 1);
+		(void) jpeg_write_scanlines(&coutinfo, buffer_array, 1);
 	}
+
+	log_inf( "Finishing decompression\n");
+
+	jpeg_finish_decompress(&cininfo);
+	jpeg_destroy_decompress(&cininfo);
 
 	log_inf( "Finishing compression\n");
 
