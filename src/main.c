@@ -8,14 +8,10 @@ int main (int argc, char *argv[])
 {
 	int err_code = EXIT_FAILURE;
 	void *log_buf;
-	int i;
 
 	struct stat file_info;
-	int fd;
-	FILE *fout;
+	FILE *fout, *fin;
 
-	unsigned long jpg_size;
-	unsigned char *jpg_buffer;
 	struct jpeg_decompress_struct cininfo;
 	struct jpeg_compress_struct coutinfo;
 	struct jpeg_error_mgr jerr;
@@ -44,29 +40,21 @@ int main (int argc, char *argv[])
 	    goto exit;
 	}
 
-	jpg_size = file_info.st_size;
-	jpg_buffer = (unsigned char*) malloc(jpg_size + 100);
-
-	log_inf("Reading data");
-
-	fd = open(in_filename, O_RDONLY);
-	i = 0;
-	while (i < jpg_size) {
-		i +=read(fd, jpg_buffer + i, jpg_size - i);
+	if ((fin = fopen(in_filename, "r")) == NULL) {
+	    log_err("FAILED to open source filename : %s\n", in_filename);
+	    goto exit;
 	}
-	close(fd);
 
 	cininfo.err = jpeg_std_error(&jerr);
 	jpeg_create_decompress(&cininfo);
 
 	log_inf("Set memory buffer as source\n");
-	jpeg_mem_src(&cininfo, jpg_buffer, jpg_size);
+	jpeg_stdio_src(&cininfo, fin);
 
 	log_inf("Reading the JPEG header\n");
 
 	if ( jpeg_read_header(&cininfo, TRUE) != 1) {
 		log_err( "Bad input file format\n");
-		free(jpg_buffer);
 		goto exit;
 	}
 
@@ -131,7 +119,6 @@ int main (int argc, char *argv[])
 	jpeg_destroy_compress(&coutinfo);
 
 	free(bmp_buffer);
-	free(jpg_buffer);
 
 	log_inf( "Complete\n");
 	err_code = EXIT_SUCCESS;
